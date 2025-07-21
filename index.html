@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="cs" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktivní Průvodce: Ohmův Zákon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals (Background: #FDFBF6, Text: #3C3633, Primary: #7A9D54, Accent: #E0E7D2) -->
+    <!-- Application Structure Plan: Aplikace je strukturována jako jednolistová stránka s pevnou boční navigací pro snadný přístup k jednotlivým sekcím. Tento design umožňuje uživatelům nelineární prozkoumávání obsahu. Začíná se základními teoretickými koncepty (definice, závislosti), přechází se k interaktivním kalkulačkám pro praktické procvičení Ohmova zákona a výpočtu odporu vodiče. Dále obsahuje vizuální sekci s interaktivním grafem pro demonstraci vztahů mezi veličinami a sekci pro výpočty zapojení rezistorů. Nakonec jsou uvedeny řešené příklady z původního dokumentu. Cílem je transformovat statický text na interaktivní učební pomůcku. -->
+    <!-- Visualization & Content Choices: Report Info: Formule pro odpor vodiče a Ohmův zákon. -> Goal: Umožnit uživatelům praktické výpočty. -> Viz/Method: Interaktivní formuláře (HTML/JS). -> Interaction: Uživatel zadá známé hodnoty a aplikace v reálném čase dopočítá neznámou. -> Justification: Aktivní zapojení posiluje pochopení vztahů. Library: Vanilla JS. | Report Info: V-A charakteristika. -> Goal: Vizuálně demonstrovat přímou úměrnost napětí a proudu a vliv odporu. -> Viz/Method: Liniový graf (Canvas). -> Interaction: Posuvník mění hodnotu odporu a dynamicky překresluje sklon grafu. -> Justification: Dynamická vizualizace je intuitivnější než statický obrázek. Library: Chart.js. | Report Info: Zapojení rezistorů. -> Goal: Vysvětlit a umožnit výpočet celkového odporu. -> Viz/Method: Schematické nákresy (HTML/CSS) a kalkulačky (HTML/JS). -> Interaction: Uživatelé zadávají odpory a vidí vypočtený výsledek. -> Justification: Okamžitá zpětná vazba při výpočtech. Library: Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF6;
+            color: #3C3633;
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-left: 3px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            background-color: #E0E7D2;
+            border-left-color: #7A9D54;
+            color: #3C3633;
+        }
+        .content-card {
+            background-color: #FFFFFF;
+            border-radius: 0.75rem;
+            border: 1px solid #E0E7D2;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: box-shadow 0.3s ease;
+        }
+        .content-card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+        }
+        .calculator-input {
+            border: 1px solid #E0E7D2;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .calculator-input:focus {
+            outline: none;
+            border-color: #7A9D54;
+            box-shadow: 0 0 0 2px #E0E7D2;
+        }
+        .btn-primary {
+            background-color: #7A9D54;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #6a8a4a;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .katex-display {
+            display: block;
+            text-align: center;
+            font-size: 1.2em;
+            margin: 1em 0;
+        }
+        details summary {
+            cursor: pointer;
+            font-weight: 600;
+            padding: 1rem;
+            background-color: #F8F9FA;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        details summary:hover {
+            background-color: #E0E7D2;
+        }
+        details div {
+            padding: 1rem;
+            border: 1px solid #E0E7D2;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+    </style>
+    <!-- MathJax CDN for LaTeX rendering -->
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+    </script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+</head>
+<body class="flex">
+
+    <aside class="w-64 h-screen fixed top-0 left-0 bg-white border-r border-gray-200 p-4 hidden lg:block">
+        <h1 class="text-xl font-bold text-gray-800 mb-6">Ohmův Zákon</h1>
+        <nav id="desktop-nav">
+            <ul class="space-y-2">
+                <li><a href="#uvod" class="nav-link block p-2 rounded-md">Úvod a základy</a></li>
+                <li><a href="#kalkulacky" class="nav-link block p-2 rounded-md">Interaktivní kalkulačky</a></li>
+                <li><a href="#graf" class="nav-link block p-2 rounded-md">Graf a vizualizace</a></li>
+                <li><a href="#zapojeni" class="nav-link block p-2 rounded-md">Zapojení rezistorů</a></li>
+                <li><a href="#priklady" class="nav-link block p-2 rounded-md">Řešené příklady</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="w-full lg:ml-64 p-4 md:p-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-center">Interaktivní Průvodce: Ohmův Zákon</h1>
+            <p class="text-center text-lg mt-2 text-gray-600">Prozkoumejte vztahy mezi napětím, proudem a odporem.</p>
+        </header>
+        
+        <section id="uvod" class="mb-12">
+            <h2 class="text-3xl font-semibold mb-4 border-b-2 border-green-200 pb-2">Úvod a základy</h2>
+            <p class="mb-6 text-gray-700">Tato sekce vás seznámí se základními pojmy, jako je elektrický odpor a jeho závislost na různých fyzikálních vlastnostech vodiče. Poznáte, kdo byl Georg Simon Ohm a jak jeho objevy formovaly moderní elektrotechniku.</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="content-card p-6">
+                    <h3 class="text-xl font-semibold mb-2">Georg Simon Ohm (1789-1854)</h3>
+                    <p>Německý fyzik, který se proslavil definováním jednoho ze základních zákonů elektřiny, který popisuje vztah mezi elektrickým napětím, proudem a odporem v elektrickém obvodu.</p>
+                </div>
+                <div class="content-card p-6">
+                    <h3 class="text-xl font-semibold mb-2">Elektrický Odpor (R)</h3>
+                    <p>Je to fyzikální veličina, která charakterizuje schopnost vodiče bránit průchodu elektrického proudu. Jednotkou odporu je **Ohm ($\Omega$)**. Platí, že $1~k\Omega = 1~000~\Omega$ a $1~M\Omega = 1~000~000~\Omega$.</p>
+                </div>
+            </div>
+
+            <h3 class="text-2xl font-semibold mt-8 mb-4">Závislost elektrického odporu</h3>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="content-card p-6 text-center">
+                    <div class="text-4xl mb-2">📏</div>
+                    <h4 class="font-semibold text-lg">Na délce vodiče (l)</h4>
+                    <p>Odpor je **přímo úměrný** délce vodiče. Delší vodič klade větší odpor.</p>
+                </div>
+                <div class="content-card p-6 text-center">
+                    <div class="text-4xl mb-2">⚪</div>
+                    <h4 class="font-semibold text-lg">Na průřezu vodiče (S)</h4>
+                    <p>Odpor je **nepřímo úměrný** průřezu vodiče. Tlustší vodič klade menší odpor.</p>
+                </div>
+                <div class="content-card p-6 text-center">
+                    <div class="text-4xl mb-2">🌡️</div>
+                    <h4 class="font-semibold text-lg">Na teplotě a materiálu (ρ)</h4>
+                    <p>Odpor závisí na materiálu (měrný odpor ρ) a u kovů s rostoucí teplotou roste.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="kalkulacky" class="mb-12">
+            <h2 class="text-3xl font-semibold mb-4 border-b-2 border-green-200 pb-2">Interaktivní kalkulačky</h2>
+            <p class="mb-6 text-gray-700">Vyzkoušejte si zákony elektřiny v praxi. Zadejte známé hodnoty do formulářů a sledujte, jak se v reálném čase dopočítávají zbývající veličiny. Je to skvělý způsob, jak si ověřit své chápání vzorců.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="content-card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Kalkulačka Ohmova zákona</h3>
+                    <p class="mb-4 text-sm text-gray-600">Zadejte dvě libovolné hodnoty a třetí bude automaticky vypočtena. Vztah: $U = I \cdot R$.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="font-medium">Napětí (U) [V]</label>
+                            <input type="number" id="ohm-u" class="calculator-input" placeholder="např. 12">
+                        </div>
+                        <div>
+                            <label class="font-medium">Proud (I) [A]</label>
+                            <input type="number" id="ohm-i" class="calculator-input" placeholder="např. 0.5">
+                        </div>
+                        <div>
+                            <label class="font-medium">Odpor (R) [Ω]</label>
+                            <input type="number" id="ohm-r" class="calculator-input" placeholder="např. 24">
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Kalkulačka odporu vodiče</h3>
+                    <p class="mb-4 text-sm text-gray-600">Vypočítejte odpor vodiče na základě jeho vlastností. Vztah: $R = \rho \cdot \frac{l}{S}$.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="font-medium">Materiál (měrný odpor ρ)</label>
+                            <select id="res-rho" class="calculator-input"></select>
+                        </div>
+                        <div>
+                            <label class="font-medium">Délka vodiče (l) [m]</label>
+                            <input type="number" id="res-l" class="calculator-input" value="100">
+                        </div>
+                        <div>
+                            <label class="font-medium">Průřez vodiče (S) [mm²]</label>
+                            <input type="number" id="res-s" class="calculator-input" value="1.5">
+                        </div>
+                        <div>
+                            <label class="font-medium">Výsledný odpor (R) [Ω]</label>
+                            <input type="text" id="res-r" class="calculator-input bg-gray-100" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="graf" class="mb-12">
+            <h2 class="text-3xl font-semibold mb-4 border-b-2 border-green-200 pb-2">Graf a vizualizace</h2>
+            <p class="mb-6 text-gray-700">Vizuální demonstrace je často nejlepší způsob, jak pochopit abstraktní koncepty. Zde můžete vidět graf závislosti proudu na napětí (tzv. Voltampérová charakteristika). Pomocí posuvníku měňte odpor a sledujte, jak se mění sklon křivky, což přímo odpovídá Ohmovu zákonu.</p>
+            <div class="content-card p-6">
+                <h3 class="text-2xl font-semibold mb-4">V-A Charakteristika rezistoru</h3>
+                <div class="chart-container">
+                    <canvas id="vaChart"></canvas>
+                </div>
+                <div class="mt-4">
+                    <label for="resistance-slider" class="font-medium">Změnit odpor: <span id="resistance-value" class="font-bold">10 Ω</span></label>
+                    <input type="range" id="resistance-slider" min="1" max="100" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+        </section>
+
+        <section id="zapojeni" class="mb-12">
+            <h2 class="text-3xl font-semibold mb-4 border-b-2 border-green-200 pb-2">Zapojení rezistorů</h2>
+            <p class="mb-6 text-gray-700">Rezistory v obvodech mohou být zapojeny dvěma základními způsoby: sériově (za sebou) nebo paralelně (vedle sebe). Každý způsob má jiný vliv na celkový odpor obvodu. V této sekci si můžete vypočítat výsledný odpor pro oba typy zapojení.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="content-card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Sériové zapojení</h3>
+                    <p class="mb-2">Odpory se sčítají. Celkový odpor je vždy větší než největší z dílčích odporů.</p>
+                    <p class="font-mono bg-gray-100 p-2 rounded text-center mb-4">R = R₁ + R₂ + ...</p>
+                     <div class="space-y-2">
+                        <input type="text" id="series-resistors" class="calculator-input" placeholder="Zadejte odpory oddělené čárkou, např. 100, 300">
+                        <button id="series-calc-btn" class="btn-primary w-full">Vypočítat</button>
+                        <p>Celkový odpor: <span id="series-result" class="font-bold">0 Ω</span></p>
+                    </div>
+                </div>
+                 <div class="content-card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Paralelní zapojení</h3>
+                    <p class="mb-2">Sčítají se převrácené hodnoty odporů. Celkový odpor je vždy menší než nejmenší z dílčích odporů.</p>
+                    <p class="font-mono bg-gray-100 p-2 rounded text-center mb-4">1/R = 1/R₁ + 1/R₂ + ...</p>
+                    <div class="space-y-2">
+                        <input type="text" id="parallel-resistors" class="calculator-input" placeholder="Zadejte odpory oddělené čárkou, např. 100, 300">
+                        <button id="parallel-calc-btn" class="btn-primary w-full">Vypočítat</button>
+                        <p>Celkový odpor: <span id="parallel-result" class="font-bold">0 Ω</span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section id="priklady">
+            <h2 class="text-3xl font-semibold mb-4 border-b-2 border-green-200 pb-2">Řešené příklady</h2>
+            <p class="mb-6 text-gray-700">Projděte si konkrétní příklady výpočtů z původního dokumentu. Každý příklad si můžete rozkliknout a podívat se na podrobný postup řešení. Je to ideální způsob, jak si ověřit, zda správně aplikujete teoretické znalosti.</p>
+            <div class="space-y-4">
+                <details>
+                    <summary>Příklad 1: Odpor vlákna žárovky</summary>
+                    <div>
+                        <p><strong>Zadání:</strong> Na žárovce jsou uvedeny údaje 6,3 V / 0,3 A. Jaký odpor má vlákno této žárovky?</p>
+                        <p><strong>Řešení:</strong> Použijeme Ohmův zákon ve tvaru $R = U / I$.</p>
+                        <p class="font-mono bg-gray-100 p-2 rounded mt-2">R = 6,3 V / 0,3 A = 21 Ω</p>
+                        <p class="mt-2"><strong>Odpověď:</strong> Vlákno žárovky má odpor 21 Ω.</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Příklad 2: Odpor hliníkového vodiče</summary>
+                    <div>
+                        <p><strong>Zadání:</strong> Jak velký odpor má hliníkový vodič o průřezu 2,5 mm² a délce 240 metrů? Měrný elektrický odpor hliníku je 0,028 Ω·mm²/m.</p>
+                        <p><strong>Řešení:</strong> Použijeme vzorec pro odpor vodiče $R = \rho \cdot (l / S)$.</p>
+                        <p class="font-mono bg-gray-100 p-2 rounded mt-2">R = 0,028 · (240 / 2,5) = 2,688 Ω</p>
+                        <p class="mt-2"><strong>Odpověď:</strong> Hliníkový vodič má odpor přibližně 2,7 Ω.</p>
+                    </div>
+                </details>
+                <details>
+                    <summary>Příklad 3: Délka konstantanového drátu</summary>
+                    <div>
+                        <p><strong>Zadání:</strong> Kolik metrů konstantanového drátu je zapotřebí, aby měl drát odpor 20 Ω? Měrný elektrický odpor konstantanu je 0,49 Ω·mm²/m. Drát má průřez 0,2 mm².</p>
+                        <p><strong>Řešení:</strong> Ze vzorce pro odpor vodiče vyjádříme délku $l = (R \cdot S) / \rho$.</p>
+                        <p class="font-mono bg-gray-100 p-2 rounded mt-2">l = (20 Ω · 0,2 mm²) / 0,49 ≈ 8,16 m</p>
+                        <p class="mt-2"><strong>Odpověď:</strong> Je zapotřebí asi 8,2 metru konstantanového drátu.</p>
+                    </div>
+                </details>
+                 <details>
+                    <summary>Příklad 4: Použití voltmetru</summary>
+                    <div>
+                        <p><strong>Zadání:</strong> Žárovkou o odporu 120 Ω prochází proud 0,05 A. Můžeme ke změření napětí mezi svorkami žárovky užít voltmetr s měřicím rozsahem 3 V?</p>
+                        <p><strong>Řešení:</strong> Nejprve vypočítáme napětí na žárovce pomocí Ohmova zákona $U = R \cdot I$.</p>
+                        <p class="font-mono bg-gray-100 p-2 rounded mt-2">U = 120 Ω · 0,05 A = 6 V</p>
+                        <p class="mt-2">Protože vypočítané napětí 6 V je větší než měřicí rozsah voltmetru 3 V.</p>
+                        <p class="mt-2"><strong>Odpověď:</strong> Voltmetr s měřicím rozsahem 3 V použít nemůžeme.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const materials = {
+                'Stříbro': 0.015,
+                'Měď': 0.017,
+                'Zlato': 0.022,
+                'Hliník': 0.028,
+                'Wolfram': 0.055,
+                'Železo': 0.088,
+                'Ocel': 0.12,
+                'Konstantan': 0.49,
+                'Nichrom': 1.1,
+            };
+
+            const rhoSelect = document.getElementById('res-rho');
+            Object.entries(materials).forEach(([name, value]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = `${name} (${value} Ω·mm²/m)`;
+                rhoSelect.appendChild(option);
+            });
+            rhoSelect.value = materials['Hliník'];
+
+            const uInput = document.getElementById('ohm-u');
+            const iInput = document.getElementById('ohm-i');
+            const rInput = document.getElementById('ohm-r');
+
+            function calculateOhm() {
+                const u = parseFloat(uInput.value);
+                const i = parseFloat(iInput.value);
+                const r = parseFloat(rInput.value);
+
+                if (uInput.value && iInput.value && !rInput.value) {
+                    if (i !== 0) rInput.value = (u / i).toFixed(2);
+                } else if (uInput.value && rInput.value && !iInput.value) {
+                    if (r !== 0) iInput.value = (u / r).toFixed(2);
+                } else if (iInput.value && rInput.value && !uInput.value) {
+                    uInput.value = (i * r).toFixed(2);
+                }
+            }
+            
+            [uInput, iInput, rInput].forEach(input => {
+                input.addEventListener('input', () => {
+                    if (document.activeElement !== input) return;
+                    
+                    if (uInput.value && iInput.value) rInput.value = '';
+                    else if (uInput.value && rInput.value) iInput.value = '';
+                    else if (iInput.value && rInput.value) uInput.value = '';
+                    
+                    calculateOhm();
+                });
+            });
+
+
+            const resRho = document.getElementById('res-rho');
+            const resL = document.getElementById('res-l');
+            const resS = document.getElementById('res-s');
+            const resR = document.getElementById('res-r');
+
+            function calculateResistance() {
+                const rho = parseFloat(resRho.value);
+                const l = parseFloat(resL.value);
+                const s = parseFloat(resS.value);
+
+                if (rho && l && s > 0) {
+                    resR.value = (rho * l / s).toFixed(3) + ' Ω';
+                } else {
+                    resR.value = '';
+                }
+            }
+            [resRho, resL, resS].forEach(input => input.addEventListener('input', calculateResistance));
+            calculateResistance();
+            
+            const resistanceSlider = document.getElementById('resistance-slider');
+            const resistanceValueSpan = document.getElementById('resistance-value');
+            const ctx = document.getElementById('vaChart').getContext('2d');
+            
+            const vaChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: 11 }, (_, i) => i * 10), // Voltage 0 to 100V
+                    datasets: [{
+                        label: 'Proud (A)',
+                        borderColor: '#7A9D54',
+                        backgroundColor: 'rgba(122, 157, 84, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Napětí (V)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Proud (A)' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toFixed(2) + ' A';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function updateChart() {
+                const resistance = parseFloat(resistanceSlider.value);
+                resistanceValueSpan.textContent = `${resistance} Ω`;
+                const voltageData = vaChart.data.labels;
+                const currentData = voltageData.map(v => resistance > 0 ? v / resistance : 0);
+                
+                vaChart.data.datasets[0].data = currentData;
+                vaChart.update();
+            }
+
+            resistanceSlider.addEventListener('input', updateChart);
+            updateChart();
+
+            document.getElementById('series-calc-btn').addEventListener('click', () => {
+                const input = document.getElementById('series-resistors').value;
+                const resistors = input.split(',').map(r => parseFloat(r.trim())).filter(r => !isNaN(r) && r > 0);
+                if (resistors.length > 0) {
+                    const total = resistors.reduce((sum, r) => sum + r, 0);
+                    document.getElementById('series-result').textContent = `${total.toFixed(2)} Ω`;
+                }
+            });
+
+            document.getElementById('parallel-calc-btn').addEventListener('click', () => {
+                const input = document.getElementById('parallel-resistors').value;
+                const resistors = input.split(',').map(r => parseFloat(r.trim())).filter(r => !isNaN(r) && r > 0);
+                 if (resistors.length > 0) {
+                    const sumOfInverses = resistors.reduce((sum, r) => sum + (1 / r), 0);
+                    const total = sumOfInverses > 0 ? 1 / sumOfInverses : 0;
+                    document.getElementById('parallel-result').textContent = `${total.toFixed(2)} Ω`;
+                }
+            });
+
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: '-50% 0px -50% 0px' });
+
+            sections.forEach(section => observer.observe(section));
+        });
+    </script>
+    <script src="ohm_clear.js"></script>
+</body>
+<script>
+// Vymazat button for Ohmova zákona kalkulačka
+    document.addEventListener('DOMContentLoaded', function() {
+        const clearBtn = document.getElementById('ohm-clear');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                document.getElementById('ohm-u').value = '';
+                document.getElementById('ohm-i').value = '';
+                document.getElementById('ohm-r').value = '';
+            });
+        }
+    });
+</script>
+</html>
